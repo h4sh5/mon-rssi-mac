@@ -10,4 +10,4 @@ make
 ./mon-rssi-mac wlan0
 ```
 
-Tested on OSX, should work everywhere.
+Tested on OSX and kali linux

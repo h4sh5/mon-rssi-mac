@@ -23,7 +23,7 @@ struct FCF {
 	unsigned version: 2;
 	unsigned type: 2;
 	unsigned subtype :4;
-};
+} __attribute__((packed)); 
 
 enum types_80211 {
 	MGNT = 0,
@@ -99,6 +99,8 @@ dump_80211(const u_char *packet, unsigned plen)
 	memcpy(&fcf, packet, 1);
 	printf("--------------------------------------------------------\n");
 	printf("rssi:%i version: %u type: %u subtype: %u\n", rssi, fcf.version, fcf.type, fcf.subtype);
+
+	printf("sizeof fcf: %u\n", sizeof fcf);
 	/* print out 4 MAC addresses: receiver, dest, transmitter and src*/
 	u_char src[7], dst[7];
 	memcpy(src, packet + 10, 6); src[6] = 0;
@@ -106,12 +108,28 @@ dump_80211(const u_char *packet, unsigned plen)
 	
 	print_mac(src); printf(" --> "); print_mac(dst); putchar('\n');
 
-	if (fcf.type == MGNT && fcf.subtype == MGNT_PROBE_BEACON) { //PROBE REQUESTS DO NOT HAVE FIXED PARAMS
-		unsigned len = packet[37];
+	if (fcf.type == MGNT && fcf.subtype == MGNT_PROBE_BEACON || fcf.type == 3) { //PROBE REQUESTS DO NOT HAVE FIXED PARAMS
+		unsigned len_field;
+#ifdef __linux__
+		len_field = 30;
+#else
+		len_field = 37;
+#endif
+		
+		unsigned len = packet[len_field];
+
 		printf("ssid len: %d\n", len);
 		printf("ssid: ");
 		for (unsigned i = 0; i < len; i++) { //read all before the first argument
-			putchar(packet[38 + i]);
+#ifdef __linux__
+			char c = packet[31 + i];
+#else
+			char c = packet[38 + i];
+#endif
+			if (c == '\0') 
+				break;
+			putchar(c);
+			
 		}
 		putchar('\n');
 		// hexdump(packet + 41, 64);
